@@ -30,13 +30,16 @@ class Pet:
 class State:
     pet_list: list[Pet] = field(default_factory=list)
 
+# Global state to persist pets across routes
+GLOBAL_STATE = State()
+
 # Simple ID generator to replace uuid4
 def generate_id():
     return f"id-{int(time.time()*1000)}-{random.randint(1000,9999)}"
 
 @route
-def index(state: State) -> Page:
-    return Page(state, [
+def index(state=None) -> Page:
+    return Page(GLOBAL_STATE, [
         "Welcome to the pet care tracker!",
         "Please input information about one of your pets",
         "Name:", TextBox("name", ""),
@@ -46,36 +49,33 @@ def index(state: State) -> Page:
         Button("Submit Pet", "/makepet")
     ])
 
-
 @route
-def makepet(state: State, name: str, age: str, species: str, tasks: str) -> Page:
+def makepet(state=None, name: str = "", age: str = "", species: str = "", tasks: str = "") -> Page:
     task_list = [t.strip() for t in tasks.split(",") if t.strip()]
     pet = Pet(name, int(age), species, task_list, [False]*len(task_list), generate_id())
-    state.pet_list.append(pet)
-    return petview(state)
-
+    GLOBAL_STATE.pet_list.append(pet)
+    return petview()
 
 @route
-def petview(state: State) -> Page:
-    if not state.pet_list:
-        return index(state)
+def petview(state=None) -> Page:
+    if not GLOBAL_STATE.pet_list:
+        return index()
     elements = ["View your pets' pages below:"]
 
-    for pet in state.pet_list:
+    for pet in GLOBAL_STATE.pet_list:
         status = "✅ All tasks done!" if all(pet.task_done) else "❌ Tasks remaining"
         elements.append(f"{pet.name} - {status}")
         elements.append(Button(f"View Tasks for {pet.name}", f"/taskview/{pet.id}"))
         
     elements.append(Button("Add New Pet", "/new_pet"))
 
-    return Page(state, elements)
-
+    return Page(GLOBAL_STATE, elements)
 
 @route("/taskview/<pet_id>")
-def taskview(state: State, pet_id: str) -> Page:
-    pet = next((p for p in state.pet_list if p.id == pet_id), None)
+def taskview(state=None, pet_id: str = "") -> Page:
+    pet = next((p for p in GLOBAL_STATE.pet_list if p.id == pet_id), None)
     if not pet:
-        return Page(state, ["Pet not found."])
+        return Page(GLOBAL_STATE, ["Pet not found."])
 
     content = [
         f"Pet Name: {pet.name}",
@@ -87,27 +87,25 @@ def taskview(state: State, pet_id: str) -> Page:
     for i, task in enumerate(pet.care_tasks):
         status = "✅" if pet.task_done[i] else "❌"
         content.append(f"{task} {status}")
-        # Button to toggle task completion
         content.append(Button(f"Toggle Task {i}", f"/toggletask/{pet.id}/{i}"))
 
     content.append(Button("Edit Pet", f"/editpet/{pet.id}"))
     content.append(Button("Delete Pet", f"/deletepet/{pet.id}"))
     content.append(Button("Return to Main Page", "/petview"))
-    return Page(state, content)
-
+    return Page(GLOBAL_STATE, content)
 
 @route("/deletepet/<pet_id>")
-def deletepet(state: State, pet_id: str) -> Page:
-    state.pet_list = [p for p in state.pet_list if p.id != pet_id]
-    return petview(state)
+def deletepet(state=None, pet_id: str = "") -> Page:
+    GLOBAL_STATE.pet_list = [p for p in GLOBAL_STATE.pet_list if p.id != pet_id]
+    return petview()
 
 @route("/editpet/<pet_id>")
-def editpet(state: State, pet_id: str) -> Page:
-    pet = next((p for p in state.pet_list if p.id == pet_id), None)
+def editpet(state=None, pet_id: str = "") -> Page:
+    pet = next((p for p in GLOBAL_STATE.pet_list if p.id == pet_id), None)
     if not pet:
-        return Page(state, ["Pet not found."])
+        return Page(GLOBAL_STATE, ["Pet not found."])
 
-    return Page(state, [
+    return Page(GLOBAL_STATE, [
         "Edit Pet Information:",
         "Name:", TextBox("name", pet.name),
         "Age:", TextBox("age", str(pet.age)),
@@ -118,13 +116,12 @@ def editpet(state: State, pet_id: str) -> Page:
     ])
 
 @route("/savepet/<pet_id>")
-def savepet(state: State, pet_id: str, name: str, age: str, species: str, tasks: str) -> Page:
-    pet = next((p for p in state.pet_list if p.id == pet_id), None)
+def savepet(state=None, pet_id: str = "", name: str = "", age: str = "", species: str = "", tasks: str = "") -> Page:
+    pet = next((p for p in GLOBAL_STATE.pet_list if p.id == pet_id), None)
     if not pet:
-        return Page(state, ["Pet not found."])
+        return Page(GLOBAL_STATE, ["Pet not found."])
 
     task_list = [t.strip() for t in tasks.split(",") if t.strip()]
-    # Keep task_done for existing tasks; pad with False for new tasks
     old_task_done = pet.task_done[:]
     pet.task_done = [old_task_done[i] if i < len(old_task_done) else False for i in range(len(task_list))]
     
@@ -133,24 +130,21 @@ def savepet(state: State, pet_id: str, name: str, age: str, species: str, tasks:
     pet.species = species
     pet.care_tasks = task_list
 
-    return taskview(state, pet.id)
-
+    return taskview(pet_id=pet.id)
 
 @route("/toggletask/<pet_id>/<task_index>")
-def toggletask(state: State, pet_id: str, task_index: str) -> Page:
-    # Convert to integer
+def toggletask(state=None, pet_id: str = "", task_index: str = "") -> Page:
     task_index = int(task_index)
-    pet = next((p for p in state.pet_list if p.id == pet_id), None)
+    pet = next((p for p in GLOBAL_STATE.pet_list if p.id == pet_id), None)
     if not pet:
-        return Page(state, ["Pet not found."])
+        return Page(GLOBAL_STATE, ["Pet not found."])
     
-    # Toggle task completion
     pet.task_done[task_index] = not pet.task_done[task_index]
-    return taskview(state, pet_id)
+    return taskview(pet_id=pet.id)
 
 @route
-def new_pet(state) -> Page:
-    return Page(state, [
+def new_pet(state=None) -> Page:
+    return Page(GLOBAL_STATE, [
         "Please input information about your pet",
         "Name:", TextBox("name", ""),
         "Age (Numerical):", TextBox("age", ""),
@@ -159,5 +153,4 @@ def new_pet(state) -> Page:
         Button("Submit Pet", "/makepet")
     ])
 
-
-start_server(State())
+start_server(GLOBAL_STATE)
