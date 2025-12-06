@@ -156,4 +156,4 @@ start_server(State())
 # ---------------------
 # Start server
 # ---------------------
-start_server(GLOBAL_STATE)
+start_server(State())
