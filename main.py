@@ -80,16 +80,23 @@ def taskview(state: State, pet_id: str) -> Page:
     pet = next((p for p in state.pet_list if p.id == pet_id), None)
     if not pet:
         return Page(state, ["Pet not found."])
+
+    # Ensure task_done is always the same length as care_tasks
+    if len(pet.task_done) < len(pet.care_tasks):
+        pet.task_done += [False] * (len(pet.care_tasks) - len(pet.task_done))
+
     content = [
         f"Pet Name: {pet.name}",
         f"Pet Species: {pet.species}",
         f"Pet Age: {pet.age}",
         "Tasks:"
     ]
+
     for i, task in enumerate(pet.care_tasks):
         status = "✅" if pet.task_done[i] else "❌"
         content.append(f"{task} {status}")
         content.append(Button(f"Toggle Task {i}", f"/toggletask/{pet.id}/{i}"))
+
     content.append(Button("Edit Pet", f"/editpet/{pet.id}"))
     content.append(Button("Delete Pet", f"/deletepet/{pet.id}"))
     content.append(Button("Return to Main Page", "/petview"))
