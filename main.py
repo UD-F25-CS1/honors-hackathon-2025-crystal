@@ -83,7 +83,10 @@ def taskview(state: State, pet_name: str) -> Page:
     ]
 
     for i, task in enumerate(pet.care_tasks):
-        status = "✅" if pet.task_done[i] else "❌"
+        if pet.task_done[i]:
+            status = "✅"
+        else:
+            status = "❌"
         content.append(f"{task} {status}")
         content.append(Button(f"Toggle Task {i}", f"/toggletask/{pet.name}/{i}"))
 
