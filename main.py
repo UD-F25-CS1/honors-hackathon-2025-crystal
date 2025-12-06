@@ -1,11 +1,18 @@
 from bakery import assert_equal
 from drafter import *
 from dataclasses import dataclass
-from uuid import uuid4
-import importlib
 
-uuid4 = importlib.import_module("uuid").uuid4
+import importlib.util
 
+# Force import of standard library 'uuid'
+spec = importlib.util.find_spec("uuid")
+if spec is None:
+    raise ImportError("Cannot find standard library uuid module")
+
+std_uuid = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(std_uuid)
+
+uuid4 = std_uuid.uuid4 
 
 # hide_debug_information()
 # set_website_framed(False)
