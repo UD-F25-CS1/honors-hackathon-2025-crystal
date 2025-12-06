@@ -2,7 +2,10 @@ from bakery import assert_equal
 from drafter import *
 from dataclasses import dataclass
 from uuid import uuid4
-from meta import *
+import importlib
+
+uuid4 = importlib.import_module("uuid").uuid4
+
 
 # hide_debug_information()
 # set_website_framed(False)
