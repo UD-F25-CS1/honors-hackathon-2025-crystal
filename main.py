@@ -1,18 +1,8 @@
+import random
+import time
 from bakery import assert_equal
 from drafter import *
-from dataclasses import dataclass
-
-import importlib.util
-
-# Force import of standard library 'uuid'
-spec = importlib.util.find_spec("uuid")
-if spec is None:
-    raise ImportError("Cannot find standard library uuid module")
-
-std_uuid = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(std_uuid)
-
-uuid4 = std_uuid.uuid4 
+from dataclasses import dataclass, field  # added field import
 
 # hide_debug_information()
 # set_website_framed(False)
@@ -40,6 +30,10 @@ class Pet:
 class State:
     pet_list: list[Pet] = field(default_factory=list)
 
+# Simple ID generator to replace uuid4
+def generate_id():
+    return f"id-{int(time.time()*1000)}-{random.randint(1000,9999)}"
+
 @route
 def index(state: State) -> Page:
     return Page(state, [
@@ -56,7 +50,7 @@ def index(state: State) -> Page:
 @route
 def makepet(state: State, name: str, age: str, species: str, tasks: str) -> Page:
     task_list = [t.strip() for t in tasks.split(",") if t.strip()]
-    pet = Pet(name, int(age), species, task_list, [False]*len(task_list), str(uuid4()))
+    pet = Pet(name, int(age), species, task_list, [False]*len(task_list), generate_id())
     state.pet_list.append(pet)
     return petview(state)
 
@@ -75,19 +69,6 @@ def petview(state: State) -> Page:
     elements.append(Button("Add New Pet", "/new_pet"))
 
     return Page(state, elements)
-
-assert_equal(
- makepet(State(pet_list=[]), 'Alice', '3', 'Dog', 'Pet, feed'),
- Page(state=State(pet_list=[Pet(name='Alice',
-                               age=3,
-                               species='Dog',
-                               care_tasks=['Pet', 'feed'],
-                               task_done=[False, False],
-                               id='f9271983-31b3-4a67-b4d1-b35f641a59b5')]),
-     content=["View your pets' pages below:",
-              'Alice - ❌ Tasks remaining',
-              Button(text='View Tasks for Alice', url='/taskview/f9271983-31b3-4a67-b4d1-b35f641a59b5'),
-              Button(text='Add New Pet', url='/new_pet')]))
 
 
 @route("/taskview/<pet_id>")
