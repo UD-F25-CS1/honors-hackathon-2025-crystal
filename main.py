@@ -3,6 +3,16 @@ from bakery import assert_equal
 from drafter import *
 from dataclasses import dataclass, field  # added field import
 
+set_website_title("Your Drafter Website")
+set_site_information(
+    "egrunw@udel.edu",
+    """
+A website that keeps track of your pets and what tasks have been done for them.
+""",
+    [],
+    [],
+    [],
+)
 
 
 @dataclass
